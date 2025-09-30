@@ -1,17 +1,27 @@
-from fastapi import FastAPI, Request
-from pydantic import BaseModel
+from fastapi import FastAPI
 import os
 import requests
+from dotenv import load_dotenv
+
+# Load environment variables from .env
+load_dotenv()
 
 app = FastAPI()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    raise RuntimeError("❌ Missing OPENAI_API_KEY. Set it in .env (local) or Railway Variables.")
 
-class ImageRequest(BaseModel):
-    image: str  # base64 string
 
-@app.post("/analyze")
-async def analyze(request: ImageRequest):
+@app.get("/")
+def root():
+    return {"message": "✅ Backend is running!"}
+
+@app.get("/test-openai")
+def test_openai():
+    """
+    Simple test call to OpenAI to confirm connection works.
+    """
     try:
         response = requests.post(
             "https://api.openai.com/v1/responses",
@@ -22,17 +32,11 @@ async def analyze(request: ImageRequest):
             json={
                 "model": "gpt-4.1-mini",
                 "input": [
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "input_text", "text": "What food is in this picture? Provide nutritional info."},
-                            {"type": "input_image", "image_base64": request.image},
-                        ],
-                    }
+                    {"role": "user", "content": [{"type": "input_text", "text": "Say hello, backend is connected!"}]}
                 ],
             },
         )
         data = response.json()
-        return {"output": data}
+        return {"openai_response": data}
     except Exception as e:
         return {"error": str(e)}
